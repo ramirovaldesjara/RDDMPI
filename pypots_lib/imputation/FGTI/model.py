@@ -1,0 +1,274 @@
+"""
+The implementation of FGTI
+
+"""
+
+
+
+from typing import Union, Optional
+import time
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+
+from .core import _FGTI
+from .data import DatasetForCSDI, TestDatasetForCSDI
+from ..base import BaseNNImputer
+from ...data.checking import key_in_data_set
+from ...nn.functional import gather_listed_dicts
+from ...nn.modules.loss import Criterion
+from ...optim.adam import Adam
+from ...optim.base import Optimizer
+
+
+class FGTI(BaseNNImputer):
+
+    def __init__(
+            self,
+            n_steps: int,
+            n_features: int,
+            d_time_embedding: int,
+            d_feature_embedding: int,
+            d_model: int,
+            n_heads: int,
+            n_encoder_layers: int,
+            n_channels: int,
+            n_residual_layers: int,
+            feature_projection_dim: int,
+            frequency_threshold: float,
+            n_top_frequencies: int,
+            n_diffusion_steps: int = 50,
+            target_strategy: str = "random",
+            schedule: str = "quad",
+            beta_start: float = 0.0001,
+            beta_end: float = 0.5,
+            batch_size: int = 32,
+            epochs: int = 100,
+            patience: Optional[int] = None,
+            optimizer: Union[Optimizer, type] = Adam,
+            num_workers: int = 0,
+            device: Optional[Union[str, torch.device, list]] = None,
+            saving_path: Optional[str] = None,
+            model_saving_strategy: Optional[str] = "best",
+            verbose: bool = True,
+    ):
+        super().__init__(
+            training_loss=Criterion,
+            validation_metric=Criterion,
+            batch_size=batch_size,
+            epochs=epochs,
+            patience=patience,
+            num_workers=num_workers,
+            device=device,
+            saving_path=saving_path,
+            model_saving_strategy=model_saving_strategy,
+            verbose=verbose,
+        )
+        assert target_strategy in ["mix", "random"]
+        assert schedule in ["quad", "linear"]
+        self.n_steps = n_steps
+        self.target_strategy = target_strategy
+
+        # set up the model
+        # set up the model
+        self.model = _FGTI(
+            n_steps=n_steps,
+            n_features=n_features,
+            d_time_embedding=d_time_embedding,
+            d_feature_embedding=d_feature_embedding,
+            d_model=d_model,
+            n_heads=n_heads,
+            n_encoder_layers=n_encoder_layers,
+            n_channels=n_channels,
+            n_residual_layers=n_residual_layers,
+            feature_projection_dim=feature_projection_dim,
+            n_diffusion_steps=n_diffusion_steps,
+            schedule=schedule,
+            beta_start=beta_start,
+            beta_end=beta_end,
+            frequency_threshold=frequency_threshold,
+            n_top_frequencies=n_top_frequencies,
+        )
+        self._print_model_size()
+        self._send_model_to_given_device()
+
+        # set up the optimizer
+        if isinstance(optimizer, Optimizer):
+            self.optimizer = optimizer
+        else:
+            self.optimizer = optimizer()  # instantiate the optimizer if it is a class
+            assert isinstance(self.optimizer, Optimizer)
+        self.optimizer.init_optimizer(self.model.parameters())
+
+    def _assemble_input_for_training(self, data: list) -> dict:
+        (
+            indices,
+            X_ori,
+            indicating_mask,
+            cond_mask,
+            observed_tp,
+        ) = self._send_data_to_given_device(data)
+
+        inputs = {
+            "X_ori": X_ori.permute(0, 2, 1),  # ori observed part for model hint
+            "indicating_mask": indicating_mask.permute(0, 2, 1),  # for loss calc
+            "cond_mask": cond_mask.permute(0, 2, 1),  # for masking X_ori
+            "observed_tp": observed_tp,
+        }
+        return inputs
+
+    def _assemble_input_for_validating(self, data: list) -> dict:
+        return self._assemble_input_for_training(data)
+
+    def _assemble_input_for_testing(self, data: list) -> dict:
+        (
+            indices,
+            X,
+            cond_mask,
+            observed_tp,
+        ) = self._send_data_to_given_device(data)
+
+        inputs = {
+            "X": X.permute(0, 2, 1),  # for model input
+            "cond_mask": cond_mask.permute(0, 2, 1),  # missing mask
+            "observed_tp": observed_tp,
+        }
+        return inputs
+
+    def fit(
+        self,
+        train_set: Union[dict, str],
+        val_set: Optional[Union[dict, str]] = None,
+        file_type: str = "hdf5",
+        n_sampling_times: int = 1,
+    ) -> None:
+        # Step 1: wrap the input data with classes Dataset and DataLoader
+        train_dataset = DatasetForCSDI(
+            train_set,
+            self.target_strategy,
+            return_X_ori=False,
+            file_type=file_type,
+        )
+        train_dataloader = DataLoader(
+            train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )
+        val_dataloader = None
+        if val_set is not None:
+            if not key_in_data_set("X_ori", val_set):
+                raise ValueError("val_set must contain 'X_ori' for model validation.")
+            val_dataset = DatasetForCSDI(
+                val_set,
+                self.target_strategy,
+                return_X_ori=True,
+                file_type=file_type,
+            )
+            val_dataloader = DataLoader(
+                val_dataset,
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.num_workers,
+            )
+
+        # Step 2: train the model and freeze it
+        self._train_model(train_dataloader, val_dataloader)
+        self.model.load_state_dict(self.best_model_dict)
+
+        # Step 3: save the model if necessary
+        self._auto_save_model_if_necessary(confirm_saving=self.model_saving_strategy == "best")
+
+    @torch.no_grad()
+    def predict(
+        self,
+        test_set: Union[dict, str],
+        file_type: str = "hdf5",
+        n_sampling_times: int = 1,
+    ) -> dict:
+        """Make predictions for the input data with the trained model.
+
+        Parameters
+        ----------
+        test_set :
+            The test dataset for model to process, should be a dictionary including keys as 'X',
+            or a path string locating a data file supported by PyPOTS (e.g. h5 file).
+            If it is a dict, X should be array-like with shape [n_samples, n_steps, n_features],
+            which is the time-series data for processing.
+            If it is a path string, the path should point to a data file, e.g. a h5 file, which contains
+            key-value pairs like a dict, and it has to include 'X' key.
+
+        file_type :
+            The type of the given file if test_set is a path string.
+
+        n_sampling_times:
+            The number of sampling times for the model to sample from the diffusion process.
+
+        Returns
+        -------
+        result_dict :
+            The dictionary containing the imputation results as key 'imputation' and latent variables if necessary.
+
+        """
+        assert n_sampling_times > 0, "n_sampling_times should be greater than 0."
+
+        self.model.eval()  # set the model to evaluation mode
+
+        # Step 1: wrap the input data with classes Dataset and DataLoader
+        test_dataset = TestDatasetForCSDI(test_set, return_X_ori=False, file_type=file_type)
+        test_dataloader = DataLoader(
+            test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+
+        # Step 2: process the data with the model
+        dict_result_collector = []
+        for idx, data in enumerate(test_dataloader):
+            inputs = self._assemble_input_for_testing(data)
+            results = self.model(
+                inputs,
+                n_sampling_times=n_sampling_times,
+            )
+            dict_result_collector.append(results)
+
+        # Step 3: output collection and return
+        result_dict = gather_listed_dicts(dict_result_collector)
+
+        return result_dict
+
+    def impute(
+        self,
+        test_set: Union[dict, str],
+        file_type: str = "hdf5",
+        n_sampling_times: int = 100,
+    ) -> np.ndarray:
+        """Make predictions for the input data with the trained model.
+
+        Parameters
+        ----------
+        test_set :
+            The test dataset for model to process, should be a dictionary including keys as 'X',
+            or a path string locating a data file supported by PyPOTS (e.g. h5 file).
+            If it is a dict, X should be array-like with shape [n_samples, n_steps, n_features],
+            which is the time-series data for processing.
+            If it is a path string, the path should point to a data file, e.g. a h5 file, which contains
+            key-value pairs like a dict, and it has to include 'X' key.
+
+        file_type :
+            The type of the given file if test_set is a path string.
+
+        n_sampling_times:
+            The number of sampling times for the model to produce predictions.
+
+        Returns
+        -------
+        result_dict :
+            The dictionary containing the imputation results as key 'imputation' and latent variables if necessary.
+
+        """
+
+        assert n_sampling_times > 0, "n_sampling_times should be greater than 0."
+        results = super().impute(test_set, file_type, n_sampling_times=n_sampling_times)
+        return results

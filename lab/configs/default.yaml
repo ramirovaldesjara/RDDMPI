@@ -1,0 +1,144 @@
+# This is the default configuration file.
+# It includes settings originally passed via command line arguments.
+# Modify these values as needed to change your experiment's behavior.
+# Task and training configuration with argparse details
+task_name: imputation # --task_name: Task name, options: [long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]
+is_training: 1 # --is_training: 1 for training, 0 for inference
+model_id: test # --model_id: Model identifier (e.g., test)
+model: Autoformer # --model: Model name, options: [Autoformer, Transformer, TimesNet]
+state: Not Started # --state: Experiment state (e.g., Not Started, Running, Finished)
+
+# Data loader settings
+data: ETTm1 # --data: Dataset type (e.g., ETTh1)
+root_path: ./data/ETT/ # --root_path: Root path for the data
+data_path: ETTh1.csv # --data_path: Data file name
+features: M # --features: Forecasting task style, options: [M, S, MS]
+target: OT # --target: Target feature for S or MS task
+freq: h # --freq: Frequency for time feature encoding (e.g., h for hourly)
+checkpoints: ./lab/checkpoints/ # --checkpoints: Directory where model checkpoints are saved
+
+# Forecasting task parameters
+seq_len: 96 # --seq_len: Input sequence length
+label_len: 48 # --label_len: Start token length
+pred_len: 96 # --pred_len: Prediction sequence length
+seasonal_patterns: Monthly # --seasonal_patterns: Seasonal pattern information (e.g., Monthly, subset for M4)
+inverse: false # --inverse: Inverse output flag (store_true action; default false)
+
+# Imputation task parameters
+mask_rate: 0.25 # --mask_rate: Mask ratio for imputation tasks
+
+# Anomaly detection task parameters
+anomaly_ratio: 0.25 # --anomaly_ratio: Prior anomaly ratio (%)
+
+# Model definition
+expand: 2 # --expand: Expansion factor for the model architecture
+d_conv: 4 # --d_conv: Convolution kernel size
+top_k: 5 # --top_k: Top K selection for TimesBlock
+num_kernels: 6 # --num_kernels: Number of kernels used in inception-style blocks
+enc_in: 7 # --enc_in: Encoder input size
+dec_in: 7 # --dec_in: Decoder input size
+c_out: 7 # --c_out: Output size
+d_model: 512 # --d_model: Model dimension
+n_heads: 8 # --n_heads: Number of attention heads
+e_layers: 2 # --e_layers: Number of encoder layers
+d_layers: 1 # --d_layers: Number of decoder layers
+d_ff: 2048 # --d_ff: Dimension of the feed-forward network
+moving_avg: 25 # --moving_avg: Window size for moving average
+factor: 1 # --factor: Attention factor
+distil: true # --distil: Whether to use distilling in encoder (store_false action; default true)
+dropout: 0.1 # --dropout: Dropout probability
+embed: timeF # --embed: Time feature encoding method, options: [timeF, fixed, learned]
+activation: gelu # --activation: Activation function (e.g., gelu)
+channel_independence: 1 # --channel_independence: 0: channel dependence 1: channel independence for FreTS model
+decomp_method: moving_avg # --decomp_method: Series decomposition method; options: moving_avg, dft_decomp
+use_norm: 1 # --use_norm: Use normalization flag; 1 (True) or 0 (False)
+down_sampling_layers: 0 # --down_sampling_layers: Number of down sampling layers
+down_sampling_window: 1 # --down_sampling_window: Down sampling window size
+down_sampling_method: null # --down_sampling_method: Down sampling method, options: [avg, max, conv]
+seg_len: 48 # --seg_len: Segment length for SegRNN iterations
+
+# Optimization settings
+num_workers: 0 # --num_workers: Number of workers for data loading
+itr: 1 # --itr: Number of experiment iterations
+train_epochs: 10 # --train_epochs: Total training epochs
+batch_size: 32 # --batch_size: Batch size for training inputs
+patience: 3 # --patience: Early stopping patience
+learning_rate: 0.0001 # --learning_rate: Optimizer learning rate
+des: test # --des: Experiment description
+loss: MSE # --loss: Loss function, e.g., MSE
+lradj: type1 # --lradj: Learning rate adjustment strategy (e.g., type1)
+use_amp: false # --use_amp: Use automatic mixed precision training flag
+
+# GPU configuration
+use_gpu: true # --use_gpu: Flag to enable GPU usage (true/false)
+gpu: 0 # --gpu: GPU index
+gpu_type: cuda # --gpu_type: GPU type to use, options: [cuda, mps]
+use_multi_gpu: false # --use_multi_gpu: Flag to enable multiple GPUs
+devices: "0,1,2,3" # --devices: Comma-separated list of GPU device ids
+
+# De-stationary projector parameters
+p_hidden_dims: [128, 128] # --p_hidden_dims: List of hidden layer dimensions for the projector
+p_hidden_layers: 2 # --p_hidden_layers: Number of hidden layers in the projector
+
+# Metrics configuration
+use_dtw: false # --use_dtw: Flag to use DTW metric (computationally expensive)
+
+# Augmentation options
+augmentation_ratio: 0 # --augmentation_ratio: How many times to perform augmentation
+seed: 2 # --seed: Random seed for experiment reproducibility
+jitter: false # --jitter: Jitter augmentation flag (store_true)
+scaling: false # --scaling: Scaling augmentation flag (store_true)
+permutation: false # --permutation: Equal length permutation augmentation flag (store_true)
+randompermutation: false # --randompermutation: Random length permutation augmentation flag (store_true)
+magwarp: false # --magwarp: Magnitude warp augmentation flag (store_true)
+timewarp: false # --timewarp: Time warp augmentation flag (store_true)
+windowslice: false # --windowslice: Window slice augmentation flag (store_true)
+windowwarp: false # --windowwarp: Window warp augmentation flag (store_true)
+rotation: false # --rotation: Rotation augmentation flag (store_true)
+spawner: false # --spawner: SPAWNER augmentation flag (store_true)
+dtwwarp: false # --dtwwarp: DTW warp augmentation flag (store_true)
+shapedtwwarp: false # --shapedtwwarp: Shape DTW warp augmentation flag (store_true)
+wdba: false # --wdba: Weighted DBA augmentation flag (store_true)
+discdtw: false # --discdtw: Discriminative DTW warp augmentation flag (store_true)
+discsdtw: false # --discsdtw: Discriminative shape DTW warp augmentation flag (store_true)
+extra_tag: "" # --extra_tag: Additional experiment tag
+
+# TimeXer configuration
+patch_len: 16 # --patch_len: Patch length for TimeXer configuration
+
+# added exp features
+m4_id: 0 # --m4_id: 0 for not using M4 dataset, >0 for using M4 dataset
+group_id: 0 # --group_id: Group ID for the experiment
+exp_type: baseline # --exp_type: Experiment type, options: [baseline, proposed]
+accumulate_grad_batches: 1 # --accumulate_grad_batches: Accumulate gradient batches
+
+# T1 Features
+# patching
+patch_size: 4
+patch_stride: 4
+
+# Macro Architecture
+downsample_ratio: 2
+positional_encoding: True
+
+# Micro Architecture
+kernel_size_large: 51
+kernel_size_small: 5
+qkv_bias: True
+ffn_ratio: 4
+series_decomp: False
+pad_only_left: False
+revin: True
+affine: True
+subtract_last: False
+optimizer: adam
+use_model_compile: false
+
+drop_path: 0.1
+drop_attn: 0.1
+drop_proj: 0.0
+drop_ffn: 0.0
+drop_head: 0.0
+
+test_non_overlapping: true
+#for exchange i wnat overlapping.. so stride =1.

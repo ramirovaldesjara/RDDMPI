@@ -1,0 +1,73 @@
+# @package _global_
+defaults:
+  - /default
+  - _self_
+task_name: imputation_pypots
+model: ModernTCN
+model_id: pypots_multiratio
+group_id: 9051
+is_training: 1
+itr: 5
+train_epochs: 300
+batch_size: 128
+learning_rate: 0.0001
+patience: 30
+lradj: type3
+data: exchange
+root_path: ./
+data_path: exchange_rate.csv
+features: M
+seq_len: 96
+label_len: 0
+pred_len: 0
+enc_in: 8
+dec_in: 8
+c_out: 8
+mit_rate: 0.4
+MIT_weight: 1.0
+ORT_weight: 0.0
+base_loss: MSE
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.4
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+model_params:
+  patch_size: 1
+  patch_stride: 1
+  downsampling_ratio: 4
+  ffn_ratio: 1
+  head_dropout: 0.6
+  backbone_dropout: 0.2
+  small_kernel_merged: false
+  use_multi_scale: false
+  individual: false
+  apply_nonstationary_norm: true
+  num_blocks:
+  - 1
+  large_size:
+  - 51
+  small_size:
+  - 5
+  dims:
+  - 64
+state: NotStarted
+des: PyPOTS_exchange_ModernTCN

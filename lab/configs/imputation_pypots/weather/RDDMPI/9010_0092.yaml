@@ -1,0 +1,57 @@
+# @package _global_
+defaults:
+  - /default
+  - _self_
+task_name: imputation_pypots
+model: RDDMPI
+model_id: pypots_multiratio
+group_id: 9010
+is_training: 1
+itr: 5
+train_epochs: 300
+batch_size: 16
+learning_rate: 0.0001
+patience: 30
+lradj: type3
+data: weather
+root_path: ./
+data_path: weather.csv
+features: M
+seq_len: 96
+label_len: 0
+pred_len: 0
+enc_in: 21
+dec_in: 21
+c_out: 21
+mit_rate: 0.2
+model_params:
+  n_layers: 4
+  n_channels: 64
+  d_time_embedding: 128
+  d_feature_embedding: 16
+  d_diffusion_embedding: 128
+  n_diffusion_steps: 50
+  n_heads: 8
+  baseline_model: "T1"
+  baseline_config_name: "9062_0004"
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+    - 0.2
+    - 0.4
+    - 0.6
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+state: NotStarted
+des: PyPOTS_weather_RDDMPI

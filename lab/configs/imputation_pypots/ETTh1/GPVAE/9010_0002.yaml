@@ -1,0 +1,63 @@
+# @package _global_
+defaults:
+  - /default
+  - _self_
+task_name: imputation_pypots
+model: GPVAE
+model_id: pypots_multiratio
+group_id: 9010
+is_training: 1
+itr: 5
+train_epochs: 60
+batch_size: 16
+learning_rate: 0.0003
+patience: 10
+lradj: type3
+data: ETTh1
+root_path: ./
+data_path: ETTh1.csv
+features: M
+seq_len: 96
+label_len: 0
+pred_len: 0
+enc_in: 7
+dec_in: 7
+c_out: 7
+mit_rate: 0.4
+model_params:
+  latent_size: 16
+  encoder_sizes: [128, 128]
+  decoder_sizes: [256, 256]
+  window_size: 12
+  kernel: cauchy
+  beta: 0.1
+  M: 1
+  K: 5
+  sigma: 1.0
+  length_scale: 7.0
+  kernel_scales: 1
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+#    - 0.1
+    - 0.2
+#    - 0.3
+    - 0.4
+#    - 0.5
+    - 0.6
+#    - 0.7
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+state: NotStarted
+des: PyPOTS_ETTh1_GPVAE

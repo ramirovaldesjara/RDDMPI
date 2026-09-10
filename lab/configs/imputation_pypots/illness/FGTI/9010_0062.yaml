@@ -1,0 +1,72 @@
+# @package _global_
+defaults:
+  - /default
+  - _self_
+task_name: imputation_pypots
+model: FGTI
+model_id: pypots_multiratio
+group_id: 9010
+is_training: 1
+itr: 5
+train_epochs: 300
+batch_size: 64
+learning_rate: 0.001
+patience: 30
+lradj: type3
+data: illness
+root_path: ./
+data_path: national_illness.csv
+features: M
+seq_len: 96
+label_len: 0
+pred_len: 0
+enc_in: 7
+dec_in: 7
+c_out: 7
+mit_rate: 0.2
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+#    - 0.1
+    - 0.2
+#    - 0.3
+    - 0.4
+#    - 0.5
+    - 0.6
+#    - 0.7
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+model_params:
+  d_time_embedding: 128
+  d_feature_embedding: 16
+  d_model: 64
+  n_heads: 4
+  n_channels: 64
+  n_residual_layers: 4
+  n_diffusion_steps: 50
+
+  # Additional FGTI architecture parameters
+  n_encoder_layers: 2
+  feature_projection_dim: 64
+
+  # FGTI frequency filters
+  frequency_threshold: 0.3
+  n_top_frequencies: 10
+
+  target_strategy: random
+  schedule: quad
+  beta_start: 0.0001
+  beta_end: 0.2
+state: NotStarted
+des: PyPOTS_illness_FGTI

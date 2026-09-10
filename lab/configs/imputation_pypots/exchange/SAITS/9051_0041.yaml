@@ -1,0 +1,64 @@
+# @package _global_
+defaults:
+  - /default
+  - _self_
+task_name: imputation_pypots
+model_id: pypots_multiratio
+group_id: 9051
+is_training: 1
+itr: 5
+train_epochs: 300
+patience: 30
+lradj: type3
+data: exchange
+root_path: ./
+data_path: exchange_rate.csv
+features: M
+seq_len: 96
+label_len: 0
+pred_len: 0
+enc_in: 8
+dec_in: 8
+c_out: 8
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.4
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+state: NotStarted
+model: SAITS
+model_params:
+  n_layers: 5
+  d_model: 256
+  n_heads: 8
+  d_k: 32
+  d_v: 32
+  d_ffn: 512
+  dropout: 0.0
+  attn_dropout: 0.0
+  diagonal_attention_mask: true
+batch_size: 128
+learning_rate: 0.000682774550436755
+mit_rate: 0.2
+MIT_weight: 1.0
+ORT_weight: 1.0
+base_loss: MAE
+des: PyPOTS_exchange_SAITS

@@ -1,0 +1,71 @@
+# @package _global_
+defaults:
+  - default_temp
+  - _self_
+learning_rate: 0.001
+batch_size: 16
+lradj: type3
+train_epochs: 300
+patience: 30
+positional_encoding: true
+patch_size: 2
+patch_stride: 1
+n_blocks:
+- 2
+- 2
+kernel_size_large:
+- 71
+- 31
+kernel_size_small: 5
+n_heads: 128
+ffn_ratio: 1
+m4_id: 0
+group_id: 9062
+exp_type: baseline
+task_name: imputation_pypots
+is_training: 1
+model: T1
+features: M
+seq_len: 96
+pred_len: 96
+label_len: 0
+des: Exp
+mit_rate: 0.4
+MIT_weight: 1.0
+ORT_weight: 0.0
+base_loss: MSE
+test_scenarios:
+- name: point_missing_only
+  patterns:
+  - type: mcar
+    rates:
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.4
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+- name: sensor_failure
+  patterns:
+  - type: mcar
+    rate: 0.05
+  - type: sequence
+    rate: 0.0015
+    seq_len:
+      range:
+      - 24
+      - 96
+separate_options: false
+itr: 5
+root_path: ./
+data_path: ETTh1.csv
+model_id: ETTh1_mask
+data: ETTh1
+enc_in: 7
+dec_in: 7
+c_out: 7
+imputation_use_mask_embedding: false
+#defaults:
+#- default_temp.yaml
