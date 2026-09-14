@@ -143,3 +143,23 @@ This repository builds on and adapts components from several excellent open-sour
 - [T1](https://github.com/Oppenheimerdinger/T1)
 ---
 
+## Citation
+
+If you find RDDMPI useful in your research, please consider citing:
+
+```bibtex
+
+@misc{jara2026rddmpiresidualdenoisingdiffusion,
+      title={RDDMPI: Residual Denoising Diffusion Model for Probabilistic Multivariate Time Series Imputation}, 
+      author={Ramiro Valdes Jara and David Chapman and Adam Meyers},
+      year={2026},
+      eprint={2609.11648},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2609.11648}, 
+}
+
+```
+
+---
+
