@@ -10,6 +10,10 @@
   Ramiro Valdes Jara · David Chapman · Adam Meyers
 </p>
 
+<p align="center">
+  📄 <a href="https://arxiv.org/pdf/2609.11648"><b>Paper</b></a>
+</p>
+
 RDDMPI is a probabilistic framework for **multivariate time series imputation** that combines a deterministic imputation model with a residual diffusion model. Instead of asking diffusion to reconstruct the entire missing signal from scratch, RDDMPI first obtains a strong deterministic estimate and then learns the remaining residual uncertainty around that estimate.
 
 <p align="center">
